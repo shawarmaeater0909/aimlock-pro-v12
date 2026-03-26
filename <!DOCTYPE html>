@@ -1,0 +1,336 @@
+let html = `
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<style>
+  body {
+    margin:0;
+    font-family:-apple-system, BlinkMacSystemFont, sans-serif;
+    color:white;
+    background: radial-gradient(circle at center, #111, #000);
+    overflow-x:hidden;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  body::before {
+    content:"";
+    position:fixed;
+    top:0; left:0;
+    width:200%; height:200%;
+    background: radial-gradient(#ffff00 1px, transparent 1px);
+    background-size:40px 40px;
+    animation:stars 20s linear infinite;
+    opacity:0.2;
+    z-index: -1;
+  }
+
+  @keyframes stars {
+    from { transform:translate(0,0); }
+    to { transform:translate(-100px,-100px); }
+  }
+
+  .container { padding:20px; padding-bottom: 50px; }
+
+  .title {
+    text-align:center;
+    font-size:28px;
+    font-weight:bold;
+    color:#ffff00;
+    text-shadow:0 0 15px #ffff00;
+    margin-bottom: 20px;
+  }
+
+  .panel {
+    margin:12px 0;
+    padding:16px;
+    border-radius:18px;
+    border:1px solid rgba(255,255,0,0.3);
+    background: rgba(15,15,15,0.95);
+    box-shadow:0 0 15px rgba(255,255,0,0.1);
+  }
+
+  button {
+    width:48%;
+    padding:12px;
+    border-radius:12px;
+    border:1px solid #ffff00;
+    background:transparent;
+    color:#ffff00;
+    font-weight: bold;
+    margin-bottom: 10px;
+  }
+
+  button.active {
+    background:#ffff00;
+    color:black;
+    box-shadow:0 0 15px #ffff00;
+  }
+
+  select {
+    width:100%;
+    padding:14px;
+    border-radius:12px;
+    background:#000;
+    color:#ffff00;
+    border:1px solid #ffff00;
+    font-size: 16px;
+    outline: none;
+  }
+
+  .toggle {
+    display:flex;
+    justify-content:space-between;
+    align-items: center;
+    margin:15px 0;
+    cursor: pointer;
+  }
+
+  .switch {
+    width:45px;
+    height:24px;
+    background:#333;
+    border-radius:20px;
+    position:relative;
+    transition: 0.3s;
+  }
+
+  .switch::after {
+    content:"";
+    width:18px;
+    height:18px;
+    background:white;
+    position:absolute;
+    top:3px;
+    left:3px;
+    border-radius:50%;
+    transition:0.3s;
+  }
+
+  .switch.on { background:#ffff00; }
+  .switch.on::after { left:24px; }
+
+  .generate {
+    width:100%;
+    padding:16px;
+    text-align:center;
+    border-radius:20px;
+    font-weight:bold;
+    background:#ffff00;
+    color:black;
+    box-shadow:0 0 20px rgba(255,255,0,0.5);
+    margin-top: 10px;
+    cursor: pointer;
+  }
+
+  .stat-row { display: flex; justify-content: space-between; margin: 8px 0; font-size: 14px; }
+  b { color: #ffff00; }
+
+  .meter {
+    height:10px;
+    background:#222;
+    border-radius:10px;
+    overflow:hidden;
+    margin-top: 10px;
+  }
+
+  .fill {
+    height:100%;
+    width:0%;
+    background: #ffff00;
+    box-shadow: 0 0 10px #ffff00;
+  }
+
+  .matrix {
+    background:black;
+    color:#00ff00;
+    font-family:monospace;
+    font-size: 10px;
+    height:80px;
+    overflow-y:auto;
+    display:none;
+    padding:10px;
+    margin-top: 10px;
+    border: 1px solid #333;
+  }
+
+  .footer { text-align:center; margin-top:20px; color:#ffff00; opacity: 0.6; font-size: 11px; }
+
+</style>
+</head>
+
+<body>
+<div class="container">
+
+  <div class="title">AimLock PRO</div>
+
+  <div class="panel">
+    <div style="display:flex; justify-content:space-between;">
+      <button id="iosBtn" class="active" onclick="switchOS('ios')">iOS</button>
+      <button id="androidBtn" onclick="switchOS('android')">Android</button>
+    </div>
+    <select id="device" onchange="updateStats()"></select>
+    <div style="margin-top:10px;">
+      <div class="stat-row"><span> RAM:</span> <b id="ram">--</b></div>
+      <div class="stat-row"><span>  Storage:</span> <b id="storage">--</b></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="toggle" onclick="toggleSwitch(this)">FPS Optimizer <div class="switch on"></div></div>
+    <div class="toggle" onclick="toggleSwitch(this)">Anti-Lag V3 <div class="switch on"></div></div>
+    <div class="toggle" onclick="toggleSwitch(this)">120FPS Lock <div class="switch"></div></div>
+  </div>
+
+  <div class="panel">
+    <div class="generate" onclick="startAI()">GENERATE SETTINGS</div>
+    <div id="ai" style="margin-top:10px; font-size:12px; color:#00ffcc; line-height:1.5;"></div>
+  </div>
+
+  <div class="panel">
+    <div class="stat-row"><span>General:</span> <b id="gen">0</b></div>
+    <div class="stat-row"><span>Red Dot:</span> <b id="red">0</b></div>
+    <div class="stat-row"><span>2x Scope:</span> <b id="x2">0</b></div>
+    <div class="stat-row"><span>4x Scope:</span> <b id="x4">0</b></div>
+    <div class="stat-row"><span>Free Look:</span> <b id="free">0</b></div>
+  </div>
+
+  <div class="panel">
+    <div id="percent" style="text-align:right; font-weight:bold; font-size:12px;">INJECTING: 0%</div>
+    <div class="meter"><div class="fill" id="fill"></div></div>
+  </div>
+
+  <div class="panel">
+    <div class="generate" style="background:#222; color:#ffff00; font-size:12px;" onclick="cleanRAM()">CLEAN REGISTRY</div>
+    <div class="matrix" id="matrix"></div>
+  </div>
+
+  <div class="footer">TikTok @shawarma444x | V1.8.2</div>
+
+</div>
+
+<script>
+const devices = {
+  ios: {
+    "iPhone 11": ["4GB", "64GB/128GB"],
+    "iPhone 11 Pro": ["4GB", "256GB/512GB"],
+    "iPhone 11 Pro Max": ["4GB", "512GB"],
+    "iPhone 12": ["4GB", "128GB"],
+    "iPhone 12 Pro": ["6GB", "256GB"],
+    "iPhone 12 Pro Max": ["6GB", "512GB"],
+    "iPhone 13": ["4GB", "128GB/256GB"],
+    "iPhone 13 Pro": ["6GB", "512GB"],
+    "iPhone 13 Pro Max": ["6GB", "1TB"],
+    "iPhone 14": ["6GB", "128GB/256GB"],
+    "iPhone 14 Pro": ["6GB", "512GB"],
+    "iPhone 14 Pro Max": ["6GB", "1TB"],
+    "iPhone 15": ["6GB", "128GB/256GB"],
+    "iPhone 15 Pro": ["8GB", "512GB"],
+    "iPhone 15 Pro Max": ["8GB", "1TB"],
+    "iPhone 16": ["8GB", "256GB"],
+    "iPhone 16 Pro": ["8GB", "512GB"],
+    "iPhone 16 Pro Max": ["12GB", "1TB"],
+    "iPhone 17": ["12GB", "256GB"],
+    "iPhone 17 Pro": ["12GB", "512GB"],
+    "iPhone 17 Pro Max": ["16GB", "1TB"]
+  },
+  android: {
+    "ROG Phone 8 Pro": ["24GB", "1TB"],
+    "Galaxy S24 Ultra": ["12GB", "512GB"],
+    "Poco F6 Pro": ["16GB", "512GB"],
+    "RedMagic 9 Pro": ["16GB", "256GB"]
+  }
+};
+
+let currentOS = "ios";
+
+function switchOS(os) {
+  currentOS = os;
+  document.getElementById("iosBtn").classList.toggle("active", os === "ios");
+  document.getElementById("androidBtn").classList.toggle("active", os === "android");
+  loadDevices();
+}
+
+function loadDevices() {
+  let select = document.getElementById("device");
+  select.innerHTML = "";
+  let list = devices[currentOS];
+  for (let d in list) {
+    let o = document.createElement("option");
+    o.value = d; o.text = d;
+    select.add(o);
+  }
+  updateStats();
+}
+
+function updateStats() {
+  let select = document.getElementById("device");
+  let data = devices[currentOS][select.value];
+  document.getElementById("ram").innerText = data[0];
+  document.getElementById("storage").innerText = data[1];
+}
+
+function toggleSwitch(el) {
+  el.querySelector(".switch").classList.toggle("on");
+}
+
+function startAI() {
+  let aiDiv = document.getElementById("ai");
+  aiDiv.innerHTML = "";
+  let steps = ["Connecting to Database...", "Patching Game Files...", "Setting Sensi > 120...", "Success!"];
+  let i = 0;
+  let interval = setInterval(() => {
+    aiDiv.innerHTML += "> " + steps[i] + "<br>";
+    i++;
+    if (i >= steps.length) {
+      clearInterval(interval);
+      runProgress();
+    }
+  }, 400);
+}
+
+function runProgress() {
+  // MINIMUM 120 LOGIC
+  let base = Math.floor(Math.random() * 21) + 125; 
+  
+  document.getElementById("gen").innerText = base;
+  document.getElementById("red").innerText = base + 10;
+  document.getElementById("x2").innerText = base + 5;
+  document.getElementById("x4").innerText = base + 2;
+  document.getElementById("free").innerText = 200;
+
+  let current = 0;
+  let percentEl = document.getElementById("percent");
+  let fill = document.getElementById("fill");
+
+  let interval = setInterval(() => {
+    current++;
+    percentEl.innerText = "INJECTING: " + current + "%";
+    fill.style.width = current + "%";
+    if (current >= 100) clearInterval(interval);
+  }, 20);
+}
+
+function cleanRAM() {
+  let box = document.getElementById("matrix");
+  box.style.display = "block";
+  box.innerHTML = "";
+  let i = 0;
+  let interval = setInterval(() => {
+    box.innerHTML += "Wiping 0x" + Math.random().toString(16).substr(2, 4).toUpperCase() + "... DONE<br>";
+    box.scrollTop = box.scrollHeight;
+    i += 4;
+    if (i >= 100) { clearInterval(interval); box.innerHTML += "SYSTEM OPTIMIZED"; }
+  }, 30);
+}
+
+loadDevices();
+</script>
+</body>
+</html>
+`;
+
+let wv = new WebView();
+await wv.loadHTML(html);
+await wv.present();
